@@ -54,7 +54,7 @@ for ($i = 0; $i -lt $Endtimes.length; $i++) {
     }
 
     # Construct output filename
-    $outputFile = Join-Path -Path $path -ChildPath "Chapter-$ChapterNum.mp3"
+    $outputFile = Join-Path -Path $path -ChildPath "Chpapter - $ChapterNum-$Book.mp3"
 
     # Run FFmpeg command
     ffmpeg -i "$audioBook" -ss $Starttime -to $endtime -f mp3 -metadata track="$ChapterNum" -metadata title="Chapter - $ChapterNum - $booktitle" -metadata album="$booktitle" -y "$outputFile"
