@@ -173,7 +173,7 @@ function Process-Audiobook {
         $outputFile = Join-Path -Path $defaultPath -ChildPath "Chapter - $ChapterNum-$Book.mp3"
 
         # Run FFmpeg command
-        ffmpeg -i "$audioBook" -ss $Starttime -to $endtime -f mp3 -metadata track="$trackNum" -metadata title="Chapter - $ChapterNum - $booktitle" -metadata album="$booktitle" -y "$outputFile"
+        ffmpeg -i "$audioBook" -map 0:a -ss $Starttime -to $endtime -f mp3 -metadata track="$trackNum" -metadata title="Chapter - $ChapterNum - $booktitle" -metadata album="$booktitle" -y "$outputFile"
 
         $Starttime = $endtime
     }
