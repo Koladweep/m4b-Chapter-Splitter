@@ -1,6 +1,6 @@
-# PowerShell script to split audiobook chapters using FFmpeg and FFprobe
-# Ensure ffmpeg and ffprobe are added to the system PATH
+# Load the necessary assemblies
 Add-Type -AssemblyName System.Windows.Forms
+Add-Type -AssemblyName System.Drawing
 
 # Function to create a custom form with a checkbox list
 function Show-CheckboxForm {
@@ -44,7 +44,7 @@ function Show-CheckboxForm {
     $addFoldersButton.Add_Click({
         $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
             Description = 'Select folders containing your audiobook files'
-            RootFolder = [Environment+SpecialFolder]::Desktop #MyComputer
+            RootFolder = [Environment+SpecialFolder]::Desktop
             SelectedPath = [Environment]::GetFolderPath([System.Environment+SpecialFolder]::Desktop)
         }
         if ($FolderBrowser.ShowDialog() -eq 'OK') {
@@ -56,12 +56,45 @@ function Show-CheckboxForm {
     })
     $form.Controls.Add($addFoldersButton)
 
+    $selectOutputFolderButton = New-Object System.Windows.Forms.Button
+    $selectOutputFolderButton.Text = "Select Output Folder"
+    $selectOutputFolderButton.Location = New-Object System.Drawing.Point(230, 320)
+    $selectOutputFolderButton.Size = New-Object System.Drawing.Size(150, 30)
+    $selectOutputFolderButton.Add_Click({
+        $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
+            Description = 'Select a folder to save your output files'
+            RootFolder = [Environment+SpecialFolder]::Desktop
+            SelectedPath = [Environment]::GetFolderPath([System.Environment+SpecialFolder]::Desktop)
+        }
+        if ($FolderBrowser.ShowDialog() -eq 'OK') {
+            $global:outputFolder = $FolderBrowser.SelectedPath
+        }
+    })
+    $form.Controls.Add($selectOutputFolderButton)
+
     $okButton = New-Object System.Windows.Forms.Button
     $okButton.Text = "Execute"
     $okButton.Location = New-Object System.Drawing.Point(470, 320)
     $okButton.Size = New-Object System.Drawing.Size(100, 30)
     $okButton.Add_Click({
-        $form.DialogResult = [System.Windows.Forms.DialogResult]::OK
+        if ($listBox.CheckedItems.Count -eq 0) {
+            [System.Windows.Forms.MessageBox]::Show("No files or folders selected. Exiting script.", "Error", [System.Windows.Forms.MessageBoxButtons]::OK, [System.Windows.Forms.MessageBoxIcon]::Error)
+            $form.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+        } elseif (-not $global:outputFolder) {
+            $FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
+                Description = 'Select a folder to save your output files'
+                RootFolder = [Environment+SpecialFolder]::Desktop
+                SelectedPath = [Environment]::GetFolderPath([System.Environment+SpecialFolder]::Desktop)
+            }
+            if ($FolderBrowser.ShowDialog() -eq 'OK') {
+                $global:outputFolder = $FolderBrowser.SelectedPath
+                $form.DialogResult = [System.Windows.Forms.DialogResult]::OK
+            } else {
+                $form.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
+            }
+        } else {
+            $form.DialogResult = [System.Windows.Forms.DialogResult]::OK
+        }
         $form.Close()
     })
     $form.Controls.Add($okButton)
@@ -95,21 +128,12 @@ if($jobCount -eq 0) {
 # to keep count of completed jobs
 $global:doneCount= 0
 
-# Open Folder Dialog to select output folder
-$FolderBrowser = New-Object System.Windows.Forms.FolderBrowserDialog -Property @{
-    Description = 'Select a folder to save your output files'
-    RootFolder = [Environment+SpecialFolder]::Desktop #MyComputer
-    SelectedPath = [Environment]::GetFolderPath([System.Environment+SpecialFolder]::Desktop)
+# Check if output folder is selected
+if (-not $global:outputFolder) {
+    Write-Host 'No output folder selected, saving to desktop'
+    $global:outputFolder = [Environment]::GetFolderPath([System.Environment+SpecialFolder]::Desktop)
 }
 
-$path = $null
-if ($FolderBrowser.ShowDialog() -eq 'OK') {
-    $path = $FolderBrowser.SelectedPath
-}
-else {
-    Write-Host 'No folder selected, saving to desktop'
-    $path = [Environment]::GetFolderPath([System.Environment+SpecialFolder]::Desktop)
-}
 # Function to process each audiobook
 function Process-Audiobook {
     param (
@@ -160,7 +184,7 @@ function Process-Audiobook {
 # Process each audiobook
 $global:lastBook = $null
 foreach ($audioBook in $audioBooks) {
-    Process-Audiobook -audioBook $audioBook -path $path
+    Process-Audiobook -audioBook $audioBook -path $global:outputFolder
     $lastBook=$audioBook
 }
 
@@ -172,14 +196,13 @@ if ($doneCount -eq $jobCount -and $jobCount -gt 0) {
     $message = "Completed: $doneCount out of $jobCount jobs. Do you want to open the output folder?"
 }
 
-if ($message -ne ""){
-Add-Type -AssemblyName System.Windows.Forms
-# Show a message box with the status message
- # Replace with your actual status message
-$result = [System.Windows.Forms.MessageBox]::Show($message, 'Open Folder?', [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
-$result
-# Open the output folder if "Yes" (Open) button is clicked
-if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
-    Start-Process -FilePath "explorer.exe" -ArgumentList "/select,`"$lastBook`""
-}
+if ($message -ne "") {
+    Add-Type -AssemblyName System.Windows.Forms
+    # Show a message box with the status message
+    $result = [System.Windows.Forms.MessageBox]::Show($message, 'Open Folder?', [System.Windows.Forms.MessageBoxButtons]::YesNo, [System.Windows.Forms.MessageBoxIcon]::Information)
+
+    # Open the output folder if "Yes" (Open) button is clicked
+    if ($result -eq [System.Windows.Forms.DialogResult]::Yes) {
+        Start-Process -FilePath "explorer.exe" -ArgumentList "/select,`"$lastBook`""
+    }
 }
