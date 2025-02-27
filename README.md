@@ -1,5 +1,5 @@
 # m4b-Chapter-Splitter
-A few PowerShell scripts that will split audiobook(s) by chapter markers and output .mp3s
+A PowerShell script that will split audiobook(s) by chapter markers and output .mp3s
 
 ## Requirments
 ffmpeg is required to be added to path
